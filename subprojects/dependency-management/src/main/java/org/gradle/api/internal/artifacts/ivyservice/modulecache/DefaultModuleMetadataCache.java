@@ -43,12 +43,12 @@ import java.util.Map;
 public class DefaultModuleMetadataCache implements ModuleMetadataCache {
     private static final Logger LOGGER = LoggerFactory.getLogger(DefaultModuleMetadataCache.class);
 
-    private final BuildCommencedTimeProvider timeProvider;
+    final BuildCommencedTimeProvider timeProvider;
     private final CacheLockingManager cacheLockingManager;
 
     private final ModuleMetadataStore moduleMetadataStore;
 
-    private Map<ModuleComponentAtRepositoryKey, CachedMetadata> inMemoryCache =  Maps.newConcurrentMap();;
+    Map<ModuleComponentAtRepositoryKey, CachedMetadata> inMemoryCache =  Maps.newConcurrentMap();;
     private PersistentIndexedCache<ModuleComponentAtRepositoryKey, ModuleMetadataCacheEntry> cache;
 
     public DefaultModuleMetadataCache(BuildCommencedTimeProvider timeProvider,
@@ -139,11 +139,11 @@ public class DefaultModuleMetadataCache implements ModuleMetadataCache {
         });
     }
 
-    private ModuleComponentAtRepositoryKey createKey(ModuleComponentRepository repository, ModuleComponentIdentifier id) {
+    protected ModuleComponentAtRepositoryKey createKey(ModuleComponentRepository repository, ModuleComponentIdentifier id) {
         return new ModuleComponentAtRepositoryKey(repository.getId(), id);
     }
 
-    private ModuleMetadataCacheEntry createEntry(ModuleComponentResolveMetadata metaData) {
+    protected ModuleMetadataCacheEntry createEntry(ModuleComponentResolveMetadata metaData) {
         return ModuleMetadataCacheEntry.forMetaData(metaData, timeProvider.getCurrentTime());
     }
 

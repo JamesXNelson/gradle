@@ -39,10 +39,10 @@ import java.util.Map;
 import java.util.Set;
 
 public class DefaultModuleArtifactsCache implements ModuleArtifactsCache {
-    private final BuildCommencedTimeProvider timeProvider;
+    final BuildCommencedTimeProvider timeProvider;
     private final CacheLockingManager cacheLockingManager;
 
-    private final Map<ModuleArtifactsKey, ModuleArtifactsCacheEntry> inMemoryCache = Maps.newConcurrentMap();
+    final Map<ModuleArtifactsKey, ModuleArtifactsCacheEntry> inMemoryCache = Maps.newConcurrentMap();
     private PersistentIndexedCache<ModuleArtifactsKey, ModuleArtifactsCacheEntry> cache;
 
     public DefaultModuleArtifactsCache(BuildCommencedTimeProvider timeProvider, CacheLockingManager cacheLockingManager) {
@@ -85,17 +85,17 @@ public class DefaultModuleArtifactsCache implements ModuleArtifactsCache {
         return null;
     }
 
-    private CachedArtifacts createCacheArtifacts(ModuleArtifactsCacheEntry entry) {
+    protected CachedArtifacts createCacheArtifacts(ModuleArtifactsCacheEntry entry) {
         long entryAge = timeProvider.getCurrentTime() - entry.createTimestamp;
         return new DefaultCachedArtifacts(entry.artifacts, entry.moduleDescriptorHash, entryAge);
     }
 
-    private static class ModuleArtifactsKey {
+    protected static class ModuleArtifactsKey {
         private final String repositoryId;
         private final ComponentIdentifier componentId;
         private final String context;
 
-        private ModuleArtifactsKey(String repositoryId, ComponentIdentifier componentId, String context) {
+        ModuleArtifactsKey(String repositoryId, ComponentIdentifier componentId, String context) {
             this.repositoryId = repositoryId;
             this.componentId = componentId;
             this.context = context;
@@ -155,7 +155,7 @@ public class DefaultModuleArtifactsCache implements ModuleArtifactsCache {
         }
     }
 
-    private static class ModuleArtifactsCacheEntry {
+    protected static class ModuleArtifactsCacheEntry {
         private final Set<ComponentArtifactMetadata> artifacts;
         private final BigInteger moduleDescriptorHash;
         private final long createTimestamp;

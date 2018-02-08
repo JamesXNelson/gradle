@@ -13,22 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.modulecache;
 
-public class ModuleRepositoryCacheProvider {
-    private final ModuleRepositoryCaches caches;
-    private final ModuleRepositoryCaches inMemoryCaches;
-
-    public ModuleRepositoryCacheProvider(ModuleRepositoryCaches caches, ModuleRepositoryCaches inMemoryCaches) {
-        this.caches = caches;
-        this.inMemoryCaches = inMemoryCaches;
-    }
-
-    public ModuleRepositoryCaches getCaches() {
-        return caches;
-    }
-
-    public ModuleRepositoryCaches getInMemoryCaches() {
-        return inMemoryCaches;
-    }
-}
+/**
+ * In-memory caches used for local file repositories.
+ */
+package org.gradle.api.internal.artifacts.ivyservice.modulecache.inmemory;

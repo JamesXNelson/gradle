@@ -40,7 +40,7 @@ public class DefaultModuleArtifactCache extends AbstractCachedIndex<ArtifactAtRe
     private static final ArtifactAtRepositoryKeySerializer KEY_SERIALIZER = keySerializer();
     private static final CachedArtifactSerializer VALUE_SERIALIZER = new CachedArtifactSerializer();
     private final BuildCommencedTimeProvider timeProvider;
-    private final Map<ArtifactAtRepositoryKey, CachedArtifact> inMemoryCache = Maps.newConcurrentMap();
+    protected final Map<ArtifactAtRepositoryKey, CachedArtifact> inMemoryCache = Maps.newConcurrentMap();
 
     public DefaultModuleArtifactCache(String persistentCacheFile, BuildCommencedTimeProvider timeProvider, CacheLockingManager cacheLockingManager) {
         super(persistentCacheFile, KEY_SERIALIZER, VALUE_SERIALIZER, cacheLockingManager);
@@ -60,7 +60,7 @@ public class DefaultModuleArtifactCache extends AbstractCachedIndex<ArtifactAtRe
         storeInternal(key, createEntry(artifactFile, moduleDescriptorHash));
     }
 
-    private DefaultCachedArtifact createEntry(File artifactFile, BigInteger moduleDescriptorHash) {
+    protected DefaultCachedArtifact createEntry(File artifactFile, BigInteger moduleDescriptorHash) {
         return new DefaultCachedArtifact(artifactFile, timeProvider.getCurrentTime(), moduleDescriptorHash);
     }
 
@@ -68,7 +68,7 @@ public class DefaultModuleArtifactCache extends AbstractCachedIndex<ArtifactAtRe
         storeInternal(key, createMissingEntry(attemptedLocations, descriptorHash));
     }
 
-    private CachedArtifact createMissingEntry(List<String> attemptedLocations, BigInteger descriptorHash) {
+    protected CachedArtifact createMissingEntry(List<String> attemptedLocations, BigInteger descriptorHash) {
         return new DefaultCachedArtifact(attemptedLocations, timeProvider.getCurrentTime(), descriptorHash);
     }
 

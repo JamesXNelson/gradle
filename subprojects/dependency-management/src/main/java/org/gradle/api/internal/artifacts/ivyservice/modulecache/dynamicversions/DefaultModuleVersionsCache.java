@@ -39,8 +39,8 @@ public class DefaultModuleVersionsCache implements ModuleVersionsCache {
     private final CacheLockingManager cacheLockingManager;
     private final ImmutableModuleIdentifierFactory moduleIdentifierFactory;
 
-    private final Map<ModuleKey, ModuleVersionsCacheEntry> inMemoryCache = Maps.newConcurrentMap();
     private PersistentIndexedCache<ModuleKey, ModuleVersionsCacheEntry> cache;
+    final Map<ModuleKey, ModuleVersionsCacheEntry> inMemoryCache = Maps.newConcurrentMap();
 
     public DefaultModuleVersionsCache(BuildCommencedTimeProvider timeProvider, CacheLockingManager cacheLockingManager, ImmutableModuleIdentifierFactory moduleIdentifierFactory) {
         this.timeProvider = timeProvider;
@@ -84,19 +84,19 @@ public class DefaultModuleVersionsCache implements ModuleVersionsCache {
         return null;
     }
 
-    private CachedModuleVersionList versionList(ModuleVersionsCacheEntry moduleVersionsCacheEntry) {
+    protected CachedModuleVersionList versionList(ModuleVersionsCacheEntry moduleVersionsCacheEntry) {
         return new DefaultCachedModuleVersionList(moduleVersionsCacheEntry, timeProvider);
     }
 
-    private ModuleKey createKey(ModuleComponentRepository repository, ModuleIdentifier moduleId) {
+    protected ModuleKey createKey(ModuleComponentRepository repository, ModuleIdentifier moduleId) {
         return new ModuleKey(repository.getId(), moduleId);
     }
 
-    private ModuleVersionsCacheEntry createEntry(Set<String> listedVersions) {
+    protected ModuleVersionsCacheEntry createEntry(Set<String> listedVersions) {
         return new ModuleVersionsCacheEntry(listedVersions, timeProvider.getCurrentTime());
     }
 
-    private static class ModuleKey {
+    protected static class ModuleKey {
         private final String repositoryId;
         private final ModuleIdentifier moduleId;
 
