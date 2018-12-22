@@ -31,9 +31,17 @@ public abstract class AbstractValidatingNamedDomainObjectContainer<T> extends Ab
 
     private final String nameDescription;
 
+    protected AbstractValidatingNamedDomainObjectContainer(Class<T> type, Instantiator instantiator, Namer<? super T> namer) {
+        this(type, instantiator, namer, CollectionCallbackActionDecorator.NOOP);
+    }
+
     protected AbstractValidatingNamedDomainObjectContainer(Class<T> type, Instantiator instantiator, Namer<? super T> namer, CollectionCallbackActionDecorator callbackActionDecorator) {
         super(type, instantiator, namer, callbackActionDecorator);
         nameDescription = type.getSimpleName() + " name";
+    }
+
+    protected AbstractValidatingNamedDomainObjectContainer(Class<T> type, Instantiator instantiator) {
+        this(type, instantiator, CollectionCallbackActionDecorator.NOOP);
     }
 
     protected AbstractValidatingNamedDomainObjectContainer(Class<T> type, Instantiator instantiator, CollectionCallbackActionDecorator callbackActionDecorator) {
