@@ -119,6 +119,20 @@ public class LocalTaskNode extends TaskNode {
     }
 
     @Override
+    public void require() {
+        super.require();
+        if (getState() != ExecutionState.SHOULD_RUN) {
+            task.select();
+        }
+    }
+
+    @Override
+    public void enforceRun() {
+        task.select();
+        super.enforceRun();
+    }
+
+    @Override
     @SuppressWarnings("NullableProblems")
     public int compareTo(Node other) {
         if (getClass() != other.getClass()) {

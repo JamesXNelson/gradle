@@ -98,6 +98,8 @@ public abstract class AbstractTask implements TaskInternal, DynamicObjectAware {
 
     private List<InputChangesAwareTaskAction> actions;
 
+    private List<Action<Task>> whenSelected;
+
     private boolean enabled = true;
 
     private final DefaultTaskDependency dependencies;
@@ -136,6 +138,7 @@ public abstract class AbstractTask implements TaskInternal, DynamicObjectAware {
     private LoggingManagerInternal loggingManager;
 
     private String toStringValue;
+    private boolean selected;
 
     protected AbstractTask() {
         this(taskInfo());
@@ -234,6 +237,13 @@ public abstract class AbstractTask implements TaskInternal, DynamicObjectAware {
             actions = new ArrayList<InputChangesAwareTaskAction>(3);
         }
         return actions;
+    }
+
+    private List<Action<Task>> getWhenSelected() {
+        if (whenSelected == null) {
+            whenSelected = new ArrayList<Action<Task>>(2);
+        }
+        return whenSelected;
     }
 
     @Override
@@ -928,5 +938,50 @@ public abstract class AbstractTask implements TaskInternal, DynamicObjectAware {
     @Override
     public Property<Duration> getTimeout() {
         return timeout;
+    }
+
+    @Override
+    public Task whenSelected(final Action<? super Task> action) {
+        if (selected) {
+            action.execute(this);
+        } else {
+            taskMutator.mutate("Task.doFirst(Closure)", new Runnable() {
+                public void run() {
+                    getWhenSelected().add(0, wrap(action, "whenSelected {} action"));
+                }
+            });
+        }
+        return this;
+    }
+
+    @Override
+    public Task whenSelected(final Closure action) {
+        Action<Task> act = convertClosureToAction(action, "whenSelected {} action");
+        if (selected) {
+            act.execute(this);
+        } else {
+            taskMutator.mutate("Task.doFirst(Closure)", new Runnable() {
+                public void run() {
+                    getWhenSelected().add(0, act);
+                }
+            });
+        }
+        return this;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public final boolean select() {
+        // method marked final because we really don't want user playing around with these semantics
+        this.selected = true;
+        if (whenSelected != null) {
+            Action<? super Task>[] todo = whenSelected.toArray(new Action[0]);
+            whenSelected = null;
+            for (Action<? super Task> action : todo) {
+                action.execute(this);
+            }
+            return todo.length > 0;
+        }
+        return false;
     }
 }

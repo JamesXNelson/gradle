@@ -46,7 +46,6 @@ public abstract class Node implements Comparable<Node> {
         this.state = ExecutionState.UNKNOWN;
     }
 
-    @VisibleForTesting
     ExecutionState getState() {
         return state;
     }

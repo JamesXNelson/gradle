@@ -750,4 +750,36 @@ public interface Task extends Comparable<Task>, ExtensionAware {
     @Optional
     @Incubating
     Property<Duration> getTimeout();
+
+    /**
+     * <p>Queues the given {@link Action} to be invoked when the task is selected for execution.</p>
+     *
+     * This callback is invoked directly before the task graph is finalized,
+     * and it is your last chance to create new tasks.
+     *
+     * The whenSelected callback queue will be drained until it is empty,
+     * so do not do anything silly like having a callback that adds itself to the same task.
+     *
+     * @param action The action to invoke when the task is selected.
+     * @return the task object this method is applied to
+     *
+     * Hm. Perhaps this should be an Action that takes an object which must be used for adding new tasks?
+     * Seems ... wrong.  Likely better to instead just mod the task containers to notify us when more tasks are added.
+     */
+    Task whenSelected(Action<? super Task> action);
+
+    /**
+     * <p>Queues the given {@link Closure} to be invoked when the task is selected for execution.</p>
+     *
+     * This callback is invoked directly before the task graph is finalized,
+     * and it is your last chance to create new tasks.
+     *
+     * The whenSelected callback queue will be drained until it is empty,
+     * so do not do anything silly like having a callback that adds itself to the same task.
+     *
+     * @param action The closure to invoke when the task is selected.
+     * @return the task object this method is applied to
+     */
+    Task whenSelected(Closure action);
+
 }

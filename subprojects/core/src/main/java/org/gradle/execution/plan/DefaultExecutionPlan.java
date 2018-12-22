@@ -169,6 +169,9 @@ public class DefaultExecutionPlan implements ExecutionPlan {
             }
 
             if (visiting.add(node)) {
+                if (node instanceof TaskNode) {
+                    ((TaskNode)node).getTask().select();
+                }
                 // Have not seen this node before - add its dependencies to the head of the queue and leave this
                 // node in the queue
                 // Make sure it has been configured
@@ -275,6 +278,10 @@ public class DefaultExecutionPlan implements ExecutionPlan {
                 visitingNodes.remove(node, currentSegment);
                 maybeRemoveProcessedShouldRunAfterEdge(walkedShouldRunAfterEdges, node);
                 continue;
+            }
+
+            if (node instanceof TaskNode) {
+                ((TaskNode)node).getTask().select();
             }
 
             boolean alreadyVisited = visitingNodes.containsKey(node);

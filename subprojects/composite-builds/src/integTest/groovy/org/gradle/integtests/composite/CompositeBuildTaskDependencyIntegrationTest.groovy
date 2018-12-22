@@ -17,7 +17,13 @@
 package org.gradle.integtests.composite
 
 import org.gradle.integtests.fixtures.build.BuildTestFile
+import org.gradle.integtests.fixtures.build.TestInclusionMode
 import spock.lang.Unroll
+
+import static org.gradle.integtests.fixtures.build.TestInclusionMode.DEPENDENCY
+import static org.gradle.integtests.fixtures.build.TestInclusionMode.DEFERRED_DEPENDENCY
+import static org.gradle.integtests.fixtures.build.TestInclusionMode.WHEN_SELECTED
+import static org.gradle.integtests.fixtures.build.TestInclusionMode.DEFERRED_WHEN_SELECTED
 
 /**
  * Tests for composite build delegating to tasks in an included build.
@@ -40,19 +46,64 @@ class CompositeBuildTaskDependencyIntegrationTest extends AbstractCompositeBuild
         includedBuilds << buildB
     }
 
-    def "can depend on task in root project of included build"() {
+    BuildTestFile newBuild(String name) {
+        singleProjectBuild(name) {
+            buildFile.text = buildB.buildFile.text
+        }
+    }
+
+    @Unroll
+    def "can depend on task via #inclusion in root project of included build"() {
         when:
-        buildA.buildFile << """
+        switch (inclusion as TestInclusionMode) {
+            case DEPENDENCY:
+                buildA.buildFile << """
     task delegate {
         dependsOn gradle.includedBuild('buildB').task(':logProject')
     }
 """
+                break
+            case DEFERRED_DEPENDENCY:
+                buildA.buildFile << """
+    gradle.projectsEvaluated {
+        task delegate {
+            dependsOn gradle.includedBuild('buildB').task(':logProject')
+        }
+    }
+"""
+                break
+            case WHEN_SELECTED:
+                buildA.buildFile << """
+    task delegate {
+        whenSelected {
+            dependsOn gradle.includedBuild('buildB').task(':logProject')
+        }
+    }
+"""
+                break
+            case DEFERRED_WHEN_SELECTED:
+                buildA.buildFile << """
+    gradle.projectsEvaluated {
+        task delegate {
+            whenSelected {
+                dependsOn gradle.includedBuild('buildB').task(':logProject')
+            }
+        }
+    }
+"""
+                break
+            default:
+                throw new Error("$inclusion not handled")
+        }
 
         execute(buildA, ":delegate")
 
         then:
         executed ":buildB:logProject"
         output.contains("Executing build 'buildB' project ':' task ':logProject'")
+
+        where:
+        inclusion << TestInclusionMode.values()
     }
 
     def "can depend on task in subproject of included build"() {
@@ -70,9 +121,12 @@ class CompositeBuildTaskDependencyIntegrationTest extends AbstractCompositeBuild
         output.contains("Executing build 'buildB' project ':b1' task ':b1:logProject'")
     }
 
-    def "can depend on multiple tasks of included build"() {
+    @Unroll
+    def "can depend on multiple tasks of included build via #inclusion"() {
         when:
-        buildA.buildFile << """
+        switch (inclusion) {
+            case DEPENDENCY:
+                buildA.buildFile << """
     def buildB = gradle.includedBuild('buildB')
     task delegate {
         dependsOn 'delegate1', 'delegate2'
@@ -87,6 +141,81 @@ class CompositeBuildTaskDependencyIntegrationTest extends AbstractCompositeBuild
         dependsOn buildB.task(':logProject')
     }
 """
+                break
+            case DEFERRED_DEPENDENCY:
+                buildA.buildFile << """
+    def buildB = gradle.includedBuild('buildB')
+    gradle.projectsEvaluated {
+        task delegate {
+            dependsOn 'delegate1', 'delegate2'
+        }
+
+        task delegate1 {
+            dependsOn buildB.task(':logProject')
+            dependsOn buildB.task(':b1:logProject')
+        }
+
+        task delegate2 {
+            dependsOn buildB.task(':logProject')
+        }
+    }
+"""
+                break
+            case WHEN_SELECTED:
+                buildA.buildFile << """
+    def buildB = gradle.includedBuild('buildB')
+    task delegate {
+        whenSelected {
+            dependsOn 'delegate1', 'delegate2'
+        }
+    }
+
+    task delegate1 {
+        whenSelected {
+            dependsOn delegate2
+            dependsOn buildB.task(':b1:logProject')
+        }
+    }
+
+    task delegate2 {
+        whenSelected {
+            dependsOn buildB.task(':logProject')
+        }
+    }
+"""
+                break
+            case DEFERRED_WHEN_SELECTED:
+                buildA.buildFile << """
+    def buildB = gradle.includedBuild('buildB')
+    task delegate {
+        gradle.projectsEvaluated {
+            whenSelected {
+                dependsOn 'delegate1', 'delegate2'
+            }
+        }
+    }
+
+    gradle.projectsEvaluated {
+        task delegate1 {
+            whenSelected {
+                dependsOn delegate2
+                dependsOn buildB.task(':b1:logProject')
+            }
+        }
+    }
+
+    task delegate2 {
+        gradle.projectsEvaluated {
+            whenSelected {
+                dependsOn buildB.task(':logProject')
+            }
+        }
+    }
+"""
+                break
+            default:
+                throw new Error("$inclusion not supported (yet)")
+        }
 
         execute(buildA, ":delegate")
 
@@ -94,6 +223,10 @@ class CompositeBuildTaskDependencyIntegrationTest extends AbstractCompositeBuild
         executed ":buildB:logProject", ":buildB:b1:logProject"
         output.contains("Executing build 'buildB' project ':' task ':logProject'")
         output.contains("Executing build 'buildB' project ':b1' task ':b1:logProject'")
+        !output.contains("Executing build 'buildB' project ':b1' task ':b2:logProject'")
+
+        where:
+        inclusion << TestInclusionMode.values()
     }
 
     def "executes tasks only once for included build"() {
@@ -149,34 +282,99 @@ class CompositeBuildTaskDependencyIntegrationTest extends AbstractCompositeBuild
         then:
         executed ":buildB:logProject"
         output.contains("Executing build 'buildB' project ':' task ':logProject'")
+        !output.contains("Executing build 'buildB' project ':' task ':b1:logProject'")
+        !output.contains("Executing build 'buildB' project ':' task ':b2:logProject'")
     }
 
-    def "can depend on task with name in all included builds"() {
+    @Unroll
+    def "can depend on task with name in all included builds via #inclusion"() {
         when:
-        BuildTestFile buildC = singleProjectBuild("buildC") {
-            buildFile.text = buildB.buildFile.text
-        }
+        BuildTestFile buildC = newBuild("buildC")
         includedBuilds << buildC
 
-        buildA.buildFile << """
+        switch (inclusion) {
+            case DEPENDENCY:
+                buildA.buildFile << """
     task delegate {
         dependsOn gradle.includedBuilds*.task(':logProject')
     }
 """
+                break
+            case DEFERRED_DEPENDENCY:
+                buildA.buildFile << """
+    task delegate { t ->
+        gradle.projectsEvaluated {
+            t.dependsOn gradle.includedBuilds*.task(':logProject')
+        }
+    }
+"""
+                break
+            case WHEN_SELECTED:
+                buildA.buildFile << """
+    task delegate {
+        whenSelected {
+            dependsOn gradle.includedBuilds*.task(':logProject')
+        }
+    }
+"""
+                break
+            case DEFERRED_WHEN_SELECTED:
+                buildA.buildFile << """
+    task delegate {
+        gradle.projectsEvaluated {
+            whenSelected {
+                dependsOn gradle.includedBuilds*.task(':logProject')
+            }
+        }
+    }
+"""
+                break
+            default:
+                throw new Error("$inclusion not supported (for now)")
+        }
 
         execute(buildA, ":delegate")
 
         then:
         executed ":buildB:logProject", ":buildC:logProject"
         output.contains("Executing build 'buildB' project ':' task ':logProject'")
+        !output.contains("Executing build 'buildB' project ':' task ':b1:logProject'")
         output.contains("Executing build 'buildC' project ':' task ':logProject'")
+
+        where:
+        inclusion << TestInclusionMode.values()
     }
 
-    def "substitutes dependency of included build when executed via task dependency"() {
+    @Unroll
+    def "substitutes dependency of included build when executed via task dependency and #inclusion"() {
         given:
         buildA.buildFile << """
     task delegate {
+        ${
+            switch (inclusion) {
+                case DEPENDENCY:
+                    return "dependsOn gradle.includedBuild('buildB').task(':jar')"
+                case DEFERRED_DEPENDENCY:
+                    return '''
+gradle.projectsEvaluated {
+    dependsOn gradle.includedBuild('buildB').task(':jar')
+}'''
+                case WHEN_SELECTED:
+                    return '''
+whenSelected {
+    dependsOn gradle.includedBuild('buildB').task(':jar')
+}'''
+                case DEFERRED_WHEN_SELECTED:
+                    return '''
+gradle.projectsEvaluated {
+    whenSelected {
         dependsOn gradle.includedBuild('buildB').task(':jar')
+    }
+}'''
+                default:
+                    throw new Error("$inclusion not yet supported!")
+            }
+        }
     }
 """
         buildB.buildFile << """
@@ -184,9 +382,40 @@ class CompositeBuildTaskDependencyIntegrationTest extends AbstractCompositeBuild
         apply plugin: 'java'
     }
 
+    ${
+            switch (inclusion) {
+                case DEPENDENCY:
+                    return '''
     dependencies {
         implementation "org.test:b1:1.0"
-    }
+    }'''
+                case DEFERRED_DEPENDENCY:
+                    return '''
+    gradle.projectsEvaluated {
+        dependencies {
+            implementation "org.test:b1:1.0"
+        }
+    }'''
+                case WHEN_SELECTED:
+                    return '''
+    tasks.compileJava.whenSelected {
+        dependencies {
+            implementation "org.test:b1:1.0"
+        }
+    }'''
+                case DEFERRED_WHEN_SELECTED:
+                    return '''
+    gradle.projectsEvaluated {
+        tasks.jar.whenSelected {
+            dependencies {
+                implementation "org.test:b1:1.0"
+            }
+        }
+    }'''
+                default:
+                    throw new Error("Case $inclusion not supported!")
+            }
+        }
 """
 
         when:
@@ -194,6 +423,37 @@ class CompositeBuildTaskDependencyIntegrationTest extends AbstractCompositeBuild
 
         then:
         executed ":buildB:b1:jar", ":buildB:jar"
+
+        where:
+        inclusion << TestInclusionMode.values()
+    }
+
+    def "A whenSelected node across composites can modify an already-visited task's dependencies"() {
+
+        when:
+        buildA.buildFile << """
+    task delegate {
+        whenSelected {
+            dependsOn indirect
+        }
+    }
+    task indirect {
+        whenSelected {
+          // not required until delegate.whenSelected has been called
+          delegate.whenSelected {
+              delegate.dependsOn gradle.includedBuild('buildB').task(':logProject')
+          }
+        }
+    }
+"""
+
+        execute(buildA, ":delegate")
+
+        then:
+        executed ":buildB:logProject"
+        output.contains("Executing build 'buildB' project ':' task ':logProject'")
+
+
     }
 
     def "reports failure when included build does not exist for composite"() {
