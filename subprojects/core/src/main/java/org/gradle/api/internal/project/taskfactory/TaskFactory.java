@@ -64,7 +64,9 @@ public class TaskFactory implements ITaskFactory {
         return AbstractTask.injectIntoNewInstance(project, identity, new Callable<S>() {
             public S call() {
                 try {
-                    return identity.type.cast(instantiator.newInstance(implType, args));
+                    S task = identity.type.cast(instantiator.newInstance(implType, args));
+                    project.getGradle().getTaskGraph().notifyNewTask(task);
+                    return task;
                 } catch (ObjectInstantiationException e) {
                     throw new TaskInstantiationException(String.format("Could not create task of type '%s'.", identity.type.getSimpleName()),
                         e.getCause());

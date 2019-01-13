@@ -96,4 +96,12 @@ public interface TaskInternal extends Task, Configurable<Task> {
      */
     @Deprecated
     void replaceLogger(Logger logger);
+
+    /**
+     * Called shortly after the task is selected and added to the task graph.
+     *
+     * @return true if the task actually notified any whenSelected callbacks.
+     */
+    boolean select();
+
 }

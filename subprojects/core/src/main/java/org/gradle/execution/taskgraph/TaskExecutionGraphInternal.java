@@ -15,9 +15,11 @@
  */
 package org.gradle.execution.taskgraph;
 
+import org.gradle.api.Action;
 import org.gradle.api.Task;
 import org.gradle.api.execution.TaskExecutionGraph;
 import org.gradle.api.internal.project.ProjectInternal;
+import org.gradle.api.internal.project.taskfactory.TaskFactory;
 import org.gradle.api.specs.Spec;
 
 import java.util.Collection;
@@ -52,6 +54,10 @@ public interface TaskExecutionGraphInternal extends TaskExecutionGraph {
      */
     void setContinueOnFailure(boolean continueOnFailure);
 
+    void repopulate();
+
+    boolean isPopulated();
+
     /**
      * Set of requested tasks.
      */
@@ -72,4 +78,12 @@ public interface TaskExecutionGraphInternal extends TaskExecutionGraph {
      */
     ProjectInternal getRootProject();
 
+    /**
+     * Called by {@link TaskFactory} whenever a new task is created.
+     *
+     * @param task The newly created task.
+     */
+    void notifyNewTask(Task task);
+
+    void onNewTask(Action<? super Task> callback);
 }

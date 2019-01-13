@@ -18,6 +18,7 @@ package org.gradle.execution.taskgraph;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import groovy.lang.Closure;
 import org.gradle.api.Action;
@@ -84,6 +85,7 @@ public class DefaultTaskExecutionGraph implements TaskExecutionGraphInternal {
     private final ListenerBuildOperationDecorator listenerBuildOperationDecorator;
     private GraphState graphState = GraphState.EMPTY;
     private List<Task> allTasks;
+    private List<Action<? super Task>> taskCreatedListeners;
     private boolean hasFiredWhenReady;
 
     private final Set<Task> requestedTasks = Sets.newTreeSet();
@@ -110,6 +112,7 @@ public class DefaultTaskExecutionGraph implements TaskExecutionGraphInternal {
         this.graphListeners = graphListeners;
         this.taskListeners = taskListeners;
         this.executionPlan = new DefaultExecutionPlan(workerLeaseService, gradleInternal, taskNodeFactory, dependencyResolver);
+        this.taskCreatedListeners = ImmutableList.of();
     }
 
     @Override
@@ -172,6 +175,7 @@ public class DefaultTaskExecutionGraph implements TaskExecutionGraphInternal {
             hasFiredWhenReady = true;
         } else if (!graphListeners.isEmpty()) {
             LOGGER.warn("Ignoring listeners of task graph ready event, as this build (" + gradleInternal.getIdentityPath() + ") has already executed work.");
+            LOGGER.info("Ignored listeners: " + graphListeners);
         }
 
         try {
@@ -316,6 +320,20 @@ public class DefaultTaskExecutionGraph implements TaskExecutionGraphInternal {
         }
     }
 
+    @Override
+    public void repopulate() {
+        if (graphState != GraphState.POPULATED) {
+            throw new IllegalStateException("Cannot repopulate task graph when in state " + graphState);
+        }
+        graphState = GraphState.DIRTY;
+        ensurePopulated();
+    }
+
+    @Override
+    public boolean isPopulated() {
+        return graphState == GraphState.POPULATED;
+    }
+
     /**
      * This action wraps the execution of a node into a build operation.
      */
@@ -408,5 +426,21 @@ public class DefaultTaskExecutionGraph implements TaskExecutionGraphInternal {
                     gradleInternal.getIdentityPath()
                 ));
         }
+    }
+
+    @Override
+    public void notifyNewTask(Task task) {
+        for (Action<? super Task> listener : taskCreatedListeners) {
+            listener.execute(task);
+        }
+    }
+
+    @Override
+    public void onNewTask(Action<? super Task> callback) {
+        List<Action<? super Task>> was = taskCreatedListeners;
+        ImmutableList<Action<? super Task>> is = ImmutableList.<Action<? super Task>>builder()
+            .addAll(was)
+            .add(callback).build();
+        taskCreatedListeners = is;
     }
 }

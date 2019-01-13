@@ -20,9 +20,13 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import org.gradle.BuildAdapter;
 import org.gradle.BuildListener;
 import org.gradle.BuildResult;
+import org.gradle.api.Action;
+import org.gradle.api.Project;
 import org.gradle.api.Task;
+import org.gradle.api.internal.TaskInternal;
 import org.gradle.initialization.exception.ExceptionAnalyser;
 import org.gradle.api.internal.GradleInternal;
 import org.gradle.api.internal.SettingsInternal;
@@ -42,6 +46,7 @@ import org.gradle.internal.operations.RunnableBuildOperation;
 import org.gradle.internal.service.scopes.BuildScopeServices;
 import org.gradle.internal.taskgraph.CalculateTaskGraphBuildOperationType;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
@@ -328,6 +333,8 @@ public class DefaultGradleLauncher implements GradleLauncher {
     }
 
     private class CalculateTaskGraph implements RunnableBuildOperation {
+        private static final String MAX_RECURSION_PROPERTY = "org.gradle.task.selected.max.loops";
+
         @Override
         public void run(BuildOperationContext buildOperationContext) {
             buildConfigurationActionExecuter.select(gradle);
@@ -337,9 +344,34 @@ public class DefaultGradleLauncher implements GradleLauncher {
             }
 
             final TaskExecutionGraphInternal taskGraph = gradle.getTaskGraph();
+            // populate the task graph.
             taskGraph.populate();
 
+            // invoke task whenSelected callbacks until no callbacks return true anymore.
+            // TaskInternal.select() clears and runs the callbacks;
+            // all requested tasks are select()ed in each loop, and the loop is always run once;
+            boolean didWork;
+            final int limit = Integer.parseInt(
+                System.getProperty(MAX_RECURSION_PROPERTY, "1024")
+            );
+            int runs = limit;
+            do {
+                didWork = false;
+                for (Task task : taskGraph.getRequestedTasks()) {
+                    didWork |= ((TaskInternal)task).select();
+                }
+                if (didWork) {
+                    // repopulate the graph between each pass.
+                    taskGraph.repopulate();
+                }
+                if (runs--==0) {
+                    throw new IllegalStateException("Task.whenSelected callbacks exceed maximum loop limit of (" + limit +");\n" +
+                        "to increase this limit, set system property -D" + MAX_RECURSION_PROPERTY+"=" + (limit*4));
+                }
+            } while (didWork);
+
             includedBuildControllers.populateTaskGraphs();
+
 
             buildOperationContext.setResult(new CalculateTaskGraphBuildOperationType.Result() {
                 @Override
