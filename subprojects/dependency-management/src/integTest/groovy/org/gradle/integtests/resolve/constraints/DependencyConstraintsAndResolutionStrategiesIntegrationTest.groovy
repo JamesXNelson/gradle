@@ -39,9 +39,9 @@ class DependencyConstraintsAndResolutionStrategiesIntegrationTest extends Abstra
                 conf
             }
         """
-        def foo11 = mavenRepo.module("org", "foo", '1.0').publish()
+        def foo10 = mavenRepo.module("org", "foo", '1.0').publish()
         mavenRepo.module("org", "foo", '1.1').publish()
-        mavenRepo.module("org", "bar", '1.0').dependsOn(foo11).publish()
+        mavenRepo.module("org", "bar", '1.0').dependsOn(foo10).publish()
     }
 
     void "force resolution strategy is applied to dependency constraints"() {
