@@ -215,7 +215,7 @@ import java.util.concurrent.Callable;
  * </ul>
  */
 @HasInternalProtocol
-public interface Project extends Comparable<Project>, ExtensionAware, PluginAware {
+public interface Project extends Comparable<Project>, ExtensionAware, PluginAware, ProjectView {
     /**
      * The default project build file name.
      */
