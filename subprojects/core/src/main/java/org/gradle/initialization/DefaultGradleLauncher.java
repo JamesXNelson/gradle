@@ -344,31 +344,35 @@ public class DefaultGradleLauncher implements GradleLauncher {
             }
 
             final TaskExecutionGraphInternal taskGraph = gradle.getTaskGraph();
+
+
             // populate the task graph.
             taskGraph.populate();
 
             // invoke task whenSelected callbacks until no callbacks return true anymore.
             // TaskInternal.select() clears and runs the callbacks;
             // all requested tasks are select()ed in each loop, and the loop is always run once;
-            boolean didWork;
             final int limit = Integer.parseInt(
                 System.getProperty(MAX_RECURSION_PROPERTY, "1024")
             );
             int runs = limit;
+            Set<Task> didWork = Sets.newHashSet();
             do {
-                didWork = false;
+                didWork.clear();
                 for (Task task : taskGraph.getRequestedTasks()) {
-                    didWork |= ((TaskInternal)task).select();
+                    if (((TaskInternal)task).select()) {
+                        didWork.add(task);
+                    }
                 }
-                if (didWork) {
+                if (!didWork.isEmpty()) {
                     // repopulate the graph between each pass.
-                    taskGraph.repopulate();
+                    taskGraph.repopulate(didWork);
                 }
                 if (runs--==0) {
                     throw new IllegalStateException("Task.whenSelected callbacks exceed maximum loop limit of (" + limit +");\n" +
                         "to increase this limit, set system property -D" + MAX_RECURSION_PROPERTY+"=" + (limit*4));
                 }
-            } while (didWork);
+            } while (!didWork.isEmpty());
 
             includedBuildControllers.populateTaskGraphs();
 

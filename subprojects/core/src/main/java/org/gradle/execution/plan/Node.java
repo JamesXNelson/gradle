@@ -195,8 +195,8 @@ public abstract class Node implements Comparable<Node> {
         return dependenciesProcessed;
     }
 
-    public void dependenciesProcessed() {
-        dependenciesProcessed = true;
+    public void setDependenciesProcessed(boolean dependenciesProcessed) {
+        this.dependenciesProcessed = dependenciesProcessed;
     }
 
     @OverridingMethodsMustInvokeSuper

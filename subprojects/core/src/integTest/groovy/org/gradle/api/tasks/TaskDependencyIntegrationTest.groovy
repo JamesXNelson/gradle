@@ -102,4 +102,28 @@ class TaskDependencyIntegrationTest extends AbstractIntegrationSpec {
         and:
         outputContains("Do not remove a task dependency from a Task instance. This behaviour has been deprecated and is scheduled to be removed in Gradle 6.0.")
     }
+
+    def "can add task dependencies in a whenSelected callback"() {
+        given:
+        buildFile << '''
+            tasks.configureEach {
+                doLast {
+                    println "Executing $it"
+                }
+            }
+            def provider = tasks.register("bar")
+            task foo {
+                whenSelected {
+                    dependsOn provider
+                }
+            }
+        '''
+
+        when:
+        succeeds "foo"
+
+        then:
+        result.assertTasksExecuted(":foo", ":bar")
+
+    }
 }

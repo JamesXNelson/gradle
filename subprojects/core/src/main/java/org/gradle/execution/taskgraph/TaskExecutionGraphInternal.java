@@ -54,7 +54,7 @@ public interface TaskExecutionGraphInternal extends TaskExecutionGraph {
      */
     void setContinueOnFailure(boolean continueOnFailure);
 
-    void repopulate();
+    void repopulate(Iterable<Task> didWork);
 
     boolean isPopulated();
 

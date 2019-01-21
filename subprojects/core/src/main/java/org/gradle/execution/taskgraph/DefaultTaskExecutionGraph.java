@@ -18,7 +18,6 @@ package org.gradle.execution.taskgraph;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import groovy.lang.Closure;
 import org.gradle.api.Action;
@@ -147,7 +146,7 @@ public class DefaultTaskExecutionGraph implements TaskExecutionGraphInternal {
 
     @Override
     public void populate() {
-        ensurePopulated();
+        ensurePopulated(false);
     }
 
     @Override
@@ -162,7 +161,7 @@ public class DefaultTaskExecutionGraph implements TaskExecutionGraphInternal {
 
     private void executeWithServices(ProjectExecutionServiceRegistry projectExecutionServices, Collection<? super Throwable> failures) {
         Timer clock = Time.startTimer();
-        ensurePopulated();
+        ensurePopulated(false);
         if (!hasFiredWhenReady) {
             ProjectStateRegistry projectStateRegistry = gradleInternal.getServices().get(ProjectStateRegistry.class);
             // We know that we're running single-threaded here, so we can use lenient project locking
@@ -264,13 +263,13 @@ public class DefaultTaskExecutionGraph implements TaskExecutionGraphInternal {
 
     @Override
     public boolean hasTask(Task task) {
-        ensurePopulated();
+        ensurePopulated(false);
         return executionPlan.getTasks().contains(task);
     }
 
     @Override
     public boolean hasTask(String path) {
-        ensurePopulated();
+        ensurePopulated(false);
         for (Task task : executionPlan.getTasks()) {
             if (task.getPath().equals(path)) {
                 return true;
@@ -286,7 +285,7 @@ public class DefaultTaskExecutionGraph implements TaskExecutionGraphInternal {
 
     @Override
     public List<Task> getAllTasks() {
-        ensurePopulated();
+        ensurePopulated(false);
         if (allTasks == null) {
             allTasks = ImmutableList.copyOf(executionPlan.getTasks());
         }
@@ -295,7 +294,7 @@ public class DefaultTaskExecutionGraph implements TaskExecutionGraphInternal {
 
     @Override
     public Set<Task> getDependencies(Task task) {
-        ensurePopulated();
+        ensurePopulated(false);
         Node node = executionPlan.getNode(task);
         ImmutableSet.Builder<Task> builder = ImmutableSet.builder();
         for (Node dependencyNode : node.getDependencySuccessors()) {
@@ -306,13 +305,13 @@ public class DefaultTaskExecutionGraph implements TaskExecutionGraphInternal {
         return builder.build();
     }
 
-    private void ensurePopulated() {
+    private void ensurePopulated(boolean isolating) {
         switch (graphState) {
             case EMPTY:
                 throw new IllegalStateException(
                     "Task information is not available, as this task execution graph has not been populated.");
             case DIRTY:
-                executionPlan.determineExecutionPlan();
+                executionPlan.determineExecutionPlan(isolating);
                 allTasks = null;
                 graphState = GraphState.POPULATED;
                 return;
@@ -321,12 +320,19 @@ public class DefaultTaskExecutionGraph implements TaskExecutionGraphInternal {
     }
 
     @Override
-    public void repopulate() {
+    public void repopulate(Iterable<Task> didWork) {
         if (graphState != GraphState.POPULATED) {
-            throw new IllegalStateException("Cannot repopulate task graph when in state " + graphState);
+            throw new IllegalStateException("Cannot repopulate task graph when in state " + graphState + ";");
         }
+        final Timer clock = Time.startTimer();
+
+        executionPlan.reAddEntryTasks(didWork);
+
         graphState = GraphState.DIRTY;
-        ensurePopulated();
+
+        ensurePopulated(true);
+
+        LOGGER.debug("Timing: Recreating the DAG took " + clock.getElapsed());
     }
 
     @Override

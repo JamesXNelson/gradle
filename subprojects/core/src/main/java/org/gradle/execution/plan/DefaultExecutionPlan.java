@@ -79,6 +79,7 @@ import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -130,6 +131,24 @@ public class DefaultExecutionPlan implements ExecutionPlan {
         return nodeMapping.get(task);
     }
 
+    public void reAddEntryTasks(Iterable<? extends Task> tasks) {
+        final Deque<Node> queue = new ArrayDeque<Node>();
+
+        // so sorry...  This clear() really shouldn't be necessary...
+        dependencyResolver.clear();
+        // Ideally, only the tasks which change should be able to invalidate the graph.
+        // Realistically, we may need to nuke more than this to work correctly in all situations.
+
+        for (Task task : tasks) {
+            TaskNode node = taskNodeFactory.getOrCreateNode(task);
+            node.setDependenciesProcessed(false);
+            queue.add(node);
+            // TODO: also invalidate nodes which would have been affected by previous selection?
+            //  they will get visited in addEntryNodes, so maybe just write integTest, and worry later.
+        }
+
+        addEntryNodes(queue);
+    }
     public void addEntryTasks(Collection<? extends Task> tasks) {
         final Deque<Node> queue = new ArrayDeque<Node>();
         Set<Node> nodesInUnknownState = Sets.newLinkedHashSet();
@@ -146,6 +165,10 @@ public class DefaultExecutionPlan implements ExecutionPlan {
             entryTasks.add(node);
             queue.add(node);
         }
+        addEntryNodes(queue);
+    }
+
+    private void addEntryNodes(final Deque<Node> queue) {
 
         final Set<Node> visiting = Sets.newHashSet();
 
@@ -161,7 +184,7 @@ public class DefaultExecutionPlan implements ExecutionPlan {
             if (filtered) {
                 // Task is not required - skip it
                 queue.removeFirst();
-                node.dependenciesProcessed();
+                node.setDependenciesProcessed(true);
                 node.doNotRequire();
                 filteredNodes.add(node);
                 continue;
@@ -193,7 +216,7 @@ public class DefaultExecutionPlan implements ExecutionPlan {
                 // Have visited this node's dependencies - add it to the graph
                 queue.removeFirst();
                 visiting.remove(node);
-                node.dependenciesProcessed();
+                node.setDependenciesProcessed(true);
             }
         }
         resolveNodesInUnknownState(nodesInUnknownState);
@@ -248,6 +271,9 @@ public class DefaultExecutionPlan implements ExecutionPlan {
     }
 
     public void determineExecutionPlan() {
+        determineExecutionPlan(false);
+    }
+    public void determineExecutionPlan(boolean isolate) {
         List<NodeInVisitingSegment> nodeQueue = Lists.newArrayList(Iterables.transform(entryTasks, new Function<TaskNode, NodeInVisitingSegment>() {
             private int index;
 
@@ -264,12 +290,13 @@ public class DefaultExecutionPlan implements ExecutionPlan {
         Deque<Node> path = new ArrayDeque<Node>();
         Map<Node, Integer> planBeforeVisiting = Maps.newHashMap();
 
+        Collection<Node> isolation = isolate ? Sets.<Node>newHashSet() : nodeMapping;
         while (!nodeQueue.isEmpty()) {
             NodeInVisitingSegment nodeInVisitingSegment = nodeQueue.get(0);
             int currentSegment = nodeInVisitingSegment.visitingSegment;
             Node node = nodeInVisitingSegment.node;
 
-            if (node.isIncludeInGraph() || nodeMapping.contains(node)) {
+            if (node.isIncludeInGraph() || isolation.contains(node)) {
                 nodeQueue.remove(0);
                 visitingNodes.remove(node, currentSegment);
                 maybeRemoveProcessedShouldRunAfterEdge(walkedShouldRunAfterEdges, node);
@@ -312,7 +339,10 @@ public class DefaultExecutionPlan implements ExecutionPlan {
                 maybeRemoveProcessedShouldRunAfterEdge(walkedShouldRunAfterEdges, node);
                 visitingNodes.remove(node, currentSegment);
                 path.pop();
-                nodeMapping.add(node);
+                isolation.add(node);
+                if (isolation != nodeMapping) {
+                    nodeMapping.add(node);
+                }
 
                 MutationInfo mutations = getOrCreateMutationsOf(node);
                 for (Node dependency : node.getDependencySuccessors()) {
