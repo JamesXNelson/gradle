@@ -390,6 +390,11 @@ public class DefaultTaskExecutionGraph implements TaskExecutionGraphInternal {
     }
 
     @Override
+    public Set<Task> getSelectedTasks() {
+        return executionPlan.getTasks();
+    }
+
+    @Override
     public Set<Task> getFilteredTasks() {
         /*
             Note: we currently extract this information from the execution plan because it's

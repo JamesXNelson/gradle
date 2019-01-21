@@ -64,6 +64,12 @@ public interface TaskExecutionGraphInternal extends TaskExecutionGraph {
     Set<Task> getRequestedTasks();
 
     /**
+     * Set of selected tasks (requested tasks plus dependencies).
+     * Does not finalize the task graph.
+     */
+    Set<Task> getSelectedTasks();
+
+    /**
      * Set of requested tasks.
      */
     Set<Task> getFilteredTasks();

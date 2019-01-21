@@ -134,4 +134,5 @@ public interface ProjectInternal extends Project, ProjectIdentifier, HasScriptSe
     ProjectEvaluationListener stepEvaluationListener(ProjectEvaluationListener listener, Action<ProjectEvaluationListener> action);
 
     ProjectState getMutationState();
+
 }

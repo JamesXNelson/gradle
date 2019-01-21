@@ -345,9 +345,18 @@ public class DefaultGradleLauncher implements GradleLauncher {
 
             final TaskExecutionGraphInternal taskGraph = gradle.getTaskGraph();
 
-
-            // populate the task graph.
+            // populate the complete initial task graph, included builds as well.
+            // all included build's whenSelected tasks will be flushed first,
+            // by virtue of recursing into here themselves, (as the primary actor).
             taskGraph.populate();
+            includedBuildControllers.populateTaskGraphs();
+            // We run the root build's whenSelected tasks last.
+            // This allows the included build to inspect configurations
+            // and populate metadata before we try to read it in our callbacks.
+
+            // This means that you can rely on your included build being fully configured,
+            // based on the initial configuration-phase task dependency wiring.
+            // You may want to have lifecycle tasks for binding sets of tasks across builds.
 
             // invoke task whenSelected callbacks until no callbacks return true anymore.
             // TaskInternal.select() clears and runs the callbacks;
@@ -357,9 +366,10 @@ public class DefaultGradleLauncher implements GradleLauncher {
             );
             int runs = limit;
             Set<Task> didWork = Sets.newHashSet();
+            boolean repopulated = false;
             do {
                 didWork.clear();
-                for (Task task : taskGraph.getRequestedTasks()) {
+                for (Task task : taskGraph.getSelectedTasks()) {
                     if (((TaskInternal)task).select()) {
                         didWork.add(task);
                     }
@@ -367,6 +377,7 @@ public class DefaultGradleLauncher implements GradleLauncher {
                 if (!didWork.isEmpty()) {
                     // repopulate the graph between each pass.
                     taskGraph.repopulate(didWork);
+                    repopulated = true;
                 }
                 if (runs--==0) {
                     throw new IllegalStateException("Task.whenSelected callbacks exceed maximum loop limit of (" + limit +");\n" +
@@ -374,7 +385,11 @@ public class DefaultGradleLauncher implements GradleLauncher {
                 }
             } while (!didWork.isEmpty());
 
-            includedBuildControllers.populateTaskGraphs();
+            if (repopulated) {
+                // repopulate included builds again,
+                // in case some new wiring has triggered a required task.
+                includedBuildControllers.populateTaskGraphs();
+            }
 
 
             buildOperationContext.setResult(new CalculateTaskGraphBuildOperationType.Result() {

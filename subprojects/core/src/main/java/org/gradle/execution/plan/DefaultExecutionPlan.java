@@ -90,7 +90,7 @@ import java.util.function.Consumer;
 public class DefaultExecutionPlan implements ExecutionPlan {
     private final Set<TaskNode> entryTasks = new LinkedHashSet<TaskNode>();
     private final NodeMapping nodeMapping = new NodeMapping();
-    private final List<Node> executionQueue = Lists.newLinkedList();
+    private final Set<Node> executionQueue = Sets.newLinkedHashSet();
     private final Map<Project, ResourceLock> projectLocks = Maps.newHashMap();
     private final FailureCollector failureCollector = new FailureCollector();
     private final TaskNodeFactory taskNodeFactory;
@@ -142,16 +142,23 @@ public class DefaultExecutionPlan implements ExecutionPlan {
         for (Task task : tasks) {
             TaskNode node = taskNodeFactory.getOrCreateNode(task);
             node.setDependenciesProcessed(false);
+            node.getTask().select();
             queue.add(node);
-            // TODO: also invalidate nodes which would have been affected by previous selection?
-            //  they will get visited in addEntryNodes, so maybe just write integTest, and worry later.
+            // also invalidate nodes which we might depend on, in case they were already processed and discarded
+            for (Node successor : node.getAllSuccessors()) {
+                // this is a very heavy handed approach...
+                successor.setDependenciesProcessed(false);
+                if (successor instanceof TaskNode) {
+                    ((TaskNode) successor).getTask().select();
+                }
+            }
+
         }
 
         addEntryNodes(queue);
     }
     public void addEntryTasks(Collection<? extends Task> tasks) {
         final Deque<Node> queue = new ArrayDeque<Node>();
-        Set<Node> nodesInUnknownState = Sets.newLinkedHashSet();
 
         List<Task> sortedTasks = new ArrayList<Task>(tasks);
         Collections.sort(sortedTasks);
@@ -170,6 +177,7 @@ public class DefaultExecutionPlan implements ExecutionPlan {
 
     private void addEntryNodes(final Deque<Node> queue) {
 
+        Set<Node> nodesInUnknownState = Sets.newLinkedHashSet();
         final Set<Node> visiting = Sets.newHashSet();
 
         while (!queue.isEmpty()) {
@@ -363,7 +371,6 @@ public class DefaultExecutionPlan implements ExecutionPlan {
                 }
             }
         }
-        executionQueue.clear();
         Iterables.addAll(executionQueue, nodeMapping);
     }
 
