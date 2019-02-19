@@ -32,6 +32,7 @@ import org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies
 import org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies.ExcludeRuleConverter;
 import org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies.ExternalModuleIvyDependencyDescriptorFactory;
 import org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies.LocalConfigurationMetadataBuilder;
+import org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies.PluggableDependencyDescriptorFactory;
 import org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies.ProjectIvyDependencyDescriptorFactory;
 import org.gradle.api.internal.artifacts.transform.ArtifactTransformActionScheme;
 import org.gradle.api.internal.artifacts.transform.ArtifactTransformParameterScheme;
@@ -84,8 +85,13 @@ class DependencyManagementGlobalScopeServices {
         return new ExternalModuleIvyDependencyDescriptorFactory(excludeRuleConverter);
     }
 
-    DependencyDescriptorFactory createDependencyDescriptorFactory(ExcludeRuleConverter excludeRuleConverter, ExternalModuleIvyDependencyDescriptorFactory descriptorFactory) {
+    PluggableDependencyDescriptorFactory createPluggableDependencyDescriptorFactory(ExcludeRuleConverter excludeRuleConverter) {
+        return new PluggableDependencyDescriptorFactory(excludeRuleConverter);
+    }
+
+    DependencyDescriptorFactory createDependencyDescriptorFactory(ExcludeRuleConverter excludeRuleConverter, PluggableDependencyDescriptorFactory pluggableDescriptorFactory, ExternalModuleIvyDependencyDescriptorFactory descriptorFactory) {
         return new DefaultDependencyDescriptorFactory(
+            pluggableDescriptorFactory,
             new ProjectIvyDependencyDescriptorFactory(excludeRuleConverter),
             descriptorFactory);
     }

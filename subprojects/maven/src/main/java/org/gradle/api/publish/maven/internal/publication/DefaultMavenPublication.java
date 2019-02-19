@@ -679,6 +679,9 @@ public class DefaultMavenPublication implements MavenPublicationInternal {
      */
     private void checkThatArtifactIsPublishedUnmodified(PublishArtifact source) {
         populateFromComponent();
+        if (mainArtifacts.isEmpty()) {
+            throw new PublishException("Cannot publish module metadata where no component artifacts are published.");
+        }
         for (MavenArtifact mavenArtifact : mainArtifacts) {
             if (source.getFile().equals(mavenArtifact.getFile())
                     && source.getExtension().equals(mavenArtifact.getExtension())
