@@ -28,7 +28,7 @@ import org.gradle.api.tasks.TaskContainer;
 /**
  * Created by James X. Nelson (James@WeTheInter.net) on 12/31/18 @ 12:40 AM.
  */
-public interface ProjectView {
+public interface ProjectLike {
 
     String getPath();
     ObjectFactory getObjects();
