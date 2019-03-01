@@ -51,15 +51,27 @@ public class AmbiguousConfigurationSelectionException extends RuntimeException {
             formatter.node(configuration);
         }
         formatter.endChildren();
-        formatter.node("All of them match the consumer attributes");
+        formatter.node("All of them match the consumer attributes:");
         // We're sorting the names of the configurations and later attributes
         // to make sure the output is consistently the same between invocations
+        formatAttributes(formatter, fromConfigurationAttributes);
+        formatter.node("Available producers:");
         formatter.startChildren();
         for (ConfigurationMetadata ambiguousConf : ambiguousConfigurations.values()) {
             formatConfiguration(formatter, targetComponent, fromConfigurationAttributes, attributeMatcher, ambiguousConf, variantAware);
         }
         formatter.endChildren();
         return formatter.toString();
+    }
+
+    static void formatAttributes(TreeFormatter formatter, AttributeContainerInternal attrs) {
+        formatter.startChildren();
+        for (Attribute<?> attribute : attrs.keySet()) {
+            String attributeName = attribute.getName();
+            Object attributeValue = attrs.getAttribute(attribute);
+            formatter.node(attributeName + " = " + attributeValue);
+        }
+        formatter.endChildren();
     }
 
     static void formatConfiguration(TreeFormatter formatter, ComponentResolveMetadata targetComponent, AttributeContainerInternal consumerAttributes, AttributeMatcher attributeMatcher, ConfigurationMetadata configuration, boolean variantAware) {
