@@ -17,9 +17,11 @@ package org.gradle.api.internal.artifacts.ivyservice.projectmodule;
 
 import org.gradle.api.artifacts.ModuleVersionIdentifier;
 import org.gradle.api.artifacts.ProjectDependency;
+import org.gradle.api.capabilities.Capability;
 import org.gradle.api.component.ComponentWithVariants;
 import org.gradle.api.component.SoftwareComponent;
 import org.gradle.api.internal.artifacts.DefaultModuleVersionIdentifier;
+import org.gradle.api.internal.component.MultiCapabilitySoftwareComponent;
 import org.gradle.api.internal.project.ProjectInternal;
 import org.gradle.execution.ProjectConfigurer;
 import org.gradle.internal.logging.text.TreeFormatter;
@@ -70,7 +72,10 @@ public class DefaultProjectDependencyPublicationResolver implements ProjectDepen
         // Select all entry points. An entry point is a publication that does not contain a component whose parent is also published
         Set<SoftwareComponent> ignored = new HashSet<SoftwareComponent>();
         for (ProjectComponentPublication publication : publications) {
-            if (publication.getComponent() != null && publication.getComponent() instanceof ComponentWithVariants) {
+            if (publication.getComponent() != null
+                && publication.getComponent() instanceof ComponentWithVariants
+                && !(publication.getComponent() instanceof MultiCapabilitySoftwareComponent)
+            ) {
                 ComponentWithVariants parent = (ComponentWithVariants) publication.getComponent();
                 ignored.addAll(parent.getVariants());
             }
@@ -91,21 +96,56 @@ public class DefaultProjectDependencyPublicationResolver implements ProjectDepen
         }
 
         // See if all entry points have the same identifier
+        boolean failed = false;
         Iterator<ProjectComponentPublication> iterator = topLevel.iterator();
-        T candidate = iterator.next().getCoordinates(coordsType);
+        T candidate = null;
+        boolean isModuleVersion = ModuleVersionIdentifier.class.isAssignableFrom(coordsType);
         while (iterator.hasNext()) {
-            T alternative = iterator.next().getCoordinates(coordsType);
-            if (!candidate.equals(alternative)) {
-                TreeFormatter formatter = new TreeFormatter();
-                formatter.node("Publishing is not able to resolve a dependency on a project with multiple publications that have different coordinates.");
-                formatter.node("Found the following publications in " + dependencyProject.getDisplayName());
-                formatter.startChildren();
-                for (ProjectComponentPublication publication : topLevel) {
-                    formatter.node(publication.getDisplayName().getCapitalizedDisplayName() + " with coordinates " + publication.getCoordinates(coordsType));
+            ProjectComponentPublication item = iterator.next();
+            T alternative = item.getCoordinates(coordsType);
+            if (isModuleVersion && item.getComponent() instanceof MultiCapabilitySoftwareComponent) {
+                assert alternative instanceof ModuleVersionIdentifier : "Already checked during item.getCoordinates()";
+                ModuleVersionIdentifier alternativeCoord = (ModuleVersionIdentifier) alternative;
+                ModuleVersionIdentifier itemCoord = ((MultiCapabilitySoftwareComponent)item.getComponent())
+                    .findCapabilityForConfiguration(alternativeCoord, dependency.getTargetConfiguration());
+                if (itemCoord != null) {
+                    // This component claims to be able to support the given coordinate at the given configuration.
+                    if (alternativeCoord.equals(itemCoord)) {
+                        if (candidate == null) {
+                            // first one in wins
+                            candidate = alternative;
+                        } else if (!candidate.equals(alternativeCoord)) {
+                            failed = true;
+                        }
+                    }
                 }
-                formatter.endChildren();
-                throw new UnsupportedOperationException(formatter.toString());
+            } else if (candidate == null){
+                candidate = alternative;
+            } else if (!candidate.equals(alternative)) {
+                failed = true;
             }
+        }
+
+        final TreeFormatter formatter;
+        if (candidate == null) {
+            formatter = new TreeFormatter();
+            formatter.node("Publishing is not able to find a compatible capability on a project with multiple publications that have different coordinates.");
+        }
+        else if (failed) {
+            formatter = new TreeFormatter();
+            formatter.node("Publishing is not able to resolve a dependency on a project with multiple publications that have different coordinates.");
+        } else {
+            formatter = null;
+        }
+
+        if (formatter != null) {
+            formatter.node("Found the following publications in " + dependencyProject.getDisplayName());
+            formatter.startChildren();
+            for (ProjectComponentPublication publication : topLevel) {
+                formatter.node(publication.getDisplayName().getCapitalizedDisplayName() + " with coordinates " + publication.getCoordinates(coordsType));
+            }
+            formatter.endChildren();
+            throw new UnsupportedOperationException(formatter.toString());
         }
         return candidate;
     }

@@ -50,6 +50,7 @@ import org.gradle.api.internal.artifacts.ivyservice.projectmodule.ProjectDepende
 import org.gradle.api.internal.attributes.ImmutableAttributes;
 import org.gradle.api.internal.attributes.ImmutableAttributesFactory;
 import org.gradle.api.internal.component.MavenPublishingAwareContext;
+import org.gradle.api.internal.component.MultiCapabilitySoftwareComponent;
 import org.gradle.api.internal.component.SoftwareComponentInternal;
 import org.gradle.api.internal.component.UsageContext;
 import org.gradle.api.internal.file.FileCollectionFactory;
@@ -306,7 +307,7 @@ public class DefaultMavenPublication implements MavenPublicationInternal {
                     addDependencyConstraint(dependency, dependencyConstraints);
                 }
             }
-            if (!usageContext.getCapabilities().isEmpty()) {
+            if (!(usageContext instanceof MultiCapabilitySoftwareComponent) && !usageContext.getCapabilities().isEmpty()) {
                 for (Capability capability : usageContext.getCapabilities()) {
                     publicationWarningsCollector.addUnsupported(String.format("Declares capability %s:%s:%s", capability.getGroup(), capability.getName(), capability.getVersion()));
                 }
