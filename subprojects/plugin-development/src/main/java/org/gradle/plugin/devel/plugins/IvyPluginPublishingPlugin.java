@@ -65,7 +65,7 @@ class IvyPluginPublishingPlugin implements Plugin<Project> {
                 if (!pluginDevelopment.isAutomatedPublishing()) {
                     return;
                 }
-                SoftwareComponent mainComponent = project.getComponents().getByName("java");
+                SoftwareComponent mainComponent = project.getComponents().getByName(pluginDevelopment.getPublishComponent());
                 IvyPublication mainPublication = addMainPublication(publishing, mainComponent);
                 addMarkerPublications(mainPublication, publishing, pluginDevelopment);
             }

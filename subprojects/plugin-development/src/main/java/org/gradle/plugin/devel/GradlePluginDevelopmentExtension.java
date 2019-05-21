@@ -56,6 +56,7 @@ public class GradlePluginDevelopmentExtension {
     private Set<SourceSet> testSourceSets = Collections.emptySet();
     private final NamedDomainObjectContainer<PluginDeclaration> plugins;
     private boolean automatedPublishing = true;
+    private String publishComponent = "java";
 
     public GradlePluginDevelopmentExtension(Project project, SourceSet pluginSourceSet, SourceSet testSourceSet) {
         this(project, pluginSourceSet, new SourceSet[] {testSourceSet});
@@ -137,5 +138,23 @@ public class GradlePluginDevelopmentExtension {
      */
     public void setAutomatedPublishing(boolean automatedPublishing) {
         this.automatedPublishing = automatedPublishing;
+    }
+
+    /**
+     * Iff {@link #isAutomatedPublishing()} returns true, a plugin publication is added to the publishing component name returned here.
+     * @return the publishing component where our plugin manifest is published.  Default is "java"
+     */
+    public String getPublishComponent() {
+        return publishComponent;
+    }
+
+    /**
+     * Call to change which publishing component the plugin manifest should be published to.
+     * @param publishComponent the name of the SoftwareComponent where we will add a publication for the plugin's manifest
+     *
+     * This value is only relevant so long as the default automatedPublishing=true has not been set to false.
+     */
+    public void setPublishComponent(String publishComponent) {
+        this.publishComponent = publishComponent;
     }
 }

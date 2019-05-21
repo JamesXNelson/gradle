@@ -62,7 +62,7 @@ class MavenPluginPublishPlugin implements Plugin<Project> {
                 if (!pluginDevelopment.isAutomatedPublishing()) {
                     return;
                 }
-                SoftwareComponent mainComponent = project.getComponents().getByName("java");
+                SoftwareComponent mainComponent = project.getComponents().getByName(pluginDevelopment.getPublishComponent());
                 MavenPublication mainPublication = addMainPublication(publishing, mainComponent);
                 addMarkerPublications(mainPublication, publishing, pluginDevelopment);
             }
