@@ -115,7 +115,7 @@ public class DefaultConfigurationMetadata extends AbstractConfigurationMetadata 
     }
 
     @Override
-    ImmutableList<ModuleDependencyMetadata> getConfigDependencies() {
+    public ImmutableList<ModuleDependencyMetadata> getConfigDependencies() {
         if (filteredConfigDependencies != null) {
             return filteredConfigDependencies;
         }
@@ -205,7 +205,7 @@ public class DefaultConfigurationMetadata extends AbstractConfigurationMetadata 
         return filtered == null ? ImmutableList.<ModuleDependencyMetadata>of() : filtered.build();
     }
 
-    Builder mutate() {
+    public Builder mutate() {
         return new Builder();
     }
 
@@ -254,45 +254,45 @@ public class DefaultConfigurationMetadata extends AbstractConfigurationMetadata 
         }
     }
 
-    class Builder {
+    public class Builder {
         private String name = DefaultConfigurationMetadata.this.getName();
         private DependencyFilter dependencyFilter = DefaultConfigurationMetadata.this.dependencyFilter;
         private List<Capability> capabilities;
         private ImmutableAttributes attributes;
         private ImmutableList<? extends ModuleComponentArtifactMetadata> artifacts;
 
-        Builder withName(String name) {
+        public Builder withName(String name) {
             this.name = name;
             return this;
         }
 
-        Builder withAttributes(ImmutableAttributes attributes) {
+        public Builder withAttributes(ImmutableAttributes attributes) {
             this.attributes = attributes;
             return this;
         }
 
-        Builder withoutConstraints() {
+        public Builder withoutConstraints() {
             dependencyFilter = dependencyFilter.dependenciesOnly();
             return this;
         }
 
-        Builder withForcedDependencies() {
+        public Builder withForcedDependencies() {
             dependencyFilter = dependencyFilter.forcing();
             return this;
         }
 
-        Builder withConstraintsOnly() {
+        public Builder withConstraintsOnly() {
             dependencyFilter = dependencyFilter.constraintsOnly();
             artifacts = ImmutableList.of();
             return this;
         }
 
-        Builder withCapabilities(List<Capability> capabilities) {
+        public Builder withCapabilities(List<Capability> capabilities) {
             this.capabilities = capabilities;
             return this;
         }
 
-        DefaultConfigurationMetadata build() {
+        public DefaultConfigurationMetadata build() {
             return new DefaultConfigurationMetadata(
                     getComponentId(),
                     name,

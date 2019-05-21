@@ -60,7 +60,7 @@ public class JavaEcosystemVariantDerivationStrategy implements VariantDerivation
         return null;
     }
 
-    private List<Capability> buildShadowPlatformCapability(ModuleComponentIdentifier componentId) {
+    public static List<Capability> buildShadowPlatformCapability(ModuleComponentIdentifier componentId) {
         return Collections.singletonList(
                 new DefaultShadowedCapability(new ImmutableCapability(
                         componentId.getGroup(),
