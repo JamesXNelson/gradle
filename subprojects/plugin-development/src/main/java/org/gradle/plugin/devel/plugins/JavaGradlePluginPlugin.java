@@ -121,7 +121,9 @@ public class JavaGradlePluginPlugin implements Plugin<Project> {
     static final String VALIDATE_TASK_PROPERTIES_TASK_DESCRIPTION = "Validates task property annotations for the plugin.";
 
     public void apply(Project project) {
-        project.getPluginManager().apply(JavaPlugin.class);
+        if (!"true".equals(project.findProperty("skip.java.plugin"))) {
+            project.getPluginManager().apply(JavaPlugin.class);
+        }
         applyDependencies(project);
         GradlePluginDevelopmentExtension extension = createExtension(project);
         configureJarTask(project, extension);
