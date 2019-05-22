@@ -340,7 +340,9 @@ public class JavaPlugin implements Plugin<ProjectInternal> {
         addJar(runtimeConfiguration, jarArtifact);
         addRuntimeVariants(runtimeElementsConfiguration, jarArtifact, javaCompile, processResources);
 
-        registerSoftwareComponents(project);
+        if (!"true".equals(project.findProperty("skip.java.component"))) {
+            registerSoftwareComponents(project);
+        }
         project.getComponents().add(objectFactory.newInstance(JavaLibraryPlatform.class, project.getConfigurations()));
     }
 
