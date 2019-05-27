@@ -307,7 +307,7 @@ public class DefaultMavenPublication implements MavenPublicationInternal {
                     addDependencyConstraint(dependency, dependencyConstraints);
                 }
             }
-            if (!(usageContext instanceof MultiCapabilitySoftwareComponent) && !usageContext.getCapabilities().isEmpty()) {
+            if (!(component instanceof MultiCapabilitySoftwareComponent) && !usageContext.getCapabilities().isEmpty()) {
                 for (Capability capability : usageContext.getCapabilities()) {
                     publicationWarningsCollector.addUnsupported(String.format("Declares capability %s:%s:%s", capability.getGroup(), capability.getName(), capability.getVersion()));
                 }

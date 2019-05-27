@@ -293,7 +293,7 @@ public class DefaultIvyPublication implements IvyPublicationInternal {
             }
 
             if (
-                !(usageContext instanceof MultiCapabilitySoftwareComponent) &&
+                !(component instanceof MultiCapabilitySoftwareComponent) &&
                 !usageContext.getCapabilities().isEmpty()
             ) {
                 for (Capability capability : usageContext.getCapabilities()) {
