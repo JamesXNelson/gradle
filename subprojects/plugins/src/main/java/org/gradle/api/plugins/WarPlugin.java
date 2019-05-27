@@ -53,7 +53,9 @@ public class WarPlugin implements Plugin<Project> {
     }
 
     public void apply(final Project project) {
-        project.getPluginManager().apply(JavaPlugin.class);
+        if (!"true".equals(project.findProperty("skip.java.plugin"))) {
+            project.getPluginManager().apply(JavaPlugin.class);
+        }
         final WarPluginConvention pluginConvention = new DefaultWarPluginConvention(project);
         project.getConvention().getPlugins().put("war", pluginConvention);
 
